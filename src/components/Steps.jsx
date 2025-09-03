@@ -7,7 +7,7 @@ const Steps = () => {
     {
       icon: <Upload className="w-8 h-8 text-white" />,
       title: 'Upload',
-      description: 'Upload your photo for AI analysis',
+      description: 'Upload your photo for analysis',
       color: 'bg-blue-500'
     },
     {
@@ -19,7 +19,7 @@ const Steps = () => {
     {
       icon: <Lightbulb className="w-8 h-8 text-white" />,
       title: 'Get Insights',
-      description: 'Receive personalized recommendations',
+      description: 'Receive personalized recommendations and linked to products',
       color: 'bg-purple-500'
     }
   ];
@@ -73,7 +73,7 @@ const Steps = () => {
 
               {/* Arrow for desktop */}
               {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 text-[#e2b8e6] text-2xl">
+                <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 text-black font-bold text-4xl">
                   →
                 </div>
               )}

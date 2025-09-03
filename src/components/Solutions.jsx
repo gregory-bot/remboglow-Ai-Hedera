@@ -7,7 +7,7 @@ const Solutions = () => {
     {
       icon: <Camera className="w-8 h-8 text-purple-500" />,
       title: 'Face Analysis',
-      description: 'AI finds your skin tone & face shape.',
+      description: 'Platform finds your skin tone & face shape.',
     },
     {
       icon: <Palette className="w-8 h-8 text-purple-500" />,
@@ -16,8 +16,8 @@ const Solutions = () => {
     },
     {
       icon: <ShoppingBag className="w-8 h-8 text-purple-500" />,
-      title: 'Fashion Ideas',
-      description: 'Styles for your look.',
+      title: 'Fashion',
+      description: 'Styles and products for your look.',
     },
     {
       icon: <Sparkles className="w-8 h-8 text-purple-500" />,
@@ -47,11 +47,11 @@ const Solutions = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-            Our Solutions
+            Our Solution
           </h2>
           <div className="w-24 h-1 bg-white mx-auto mb-6"></div>
           <p className="text-xl text-white/90 max-w-3xl mx-auto">
-            Advanced AI technology meets personalized beauty recommendations for the perfect match.
+            Advanced technology meets personalized beauty recommendations for the perfect match.
           </p>
         </motion.div>
 

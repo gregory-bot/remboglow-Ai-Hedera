@@ -5,8 +5,8 @@ const Hero = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   const heroImages = [
-    "https://images.pexels.com/photos/6954098/pexels-photo-6954098.jpeg",
-    "https://i.pinimg.com/736x/01/c3/79/01c379f78533d5610cfb958ba6832786.jpg",
+    "https://imgproxy.services.pitch.com/_/w:1162/h:858/resizing_type:fit/format:avif/plain/pitch-assets-ccb95893-de3f-4266-973c-20049231b248/071e7e57-0257-446c-9403-259d8213a415",
+    "https://i.pinimg.com/736x/2a/b8/93/2ab89346194ee5eea1e1990da184629d.jpg",
     "https://i.pinimg.com/1200x/b0/0c/f7/b00cf77bd76332e5b598cd5c04b7964c.jpg"
   ];
 
@@ -49,7 +49,7 @@ const Hero = () => {
               onClick={scrollToFeatures}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="bg-white text-[#e2b8e6] hover:bg-purple-50 px-8 py-4 rounded-full text-lg font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform"
+              className="bg-black text-[#e2b8e6] px-8 py-4 rounded-full text-lg font-bold shadow-xl transition-all duration-300 transform"
             >
               Find Your Perfect Products
             </motion.button>
