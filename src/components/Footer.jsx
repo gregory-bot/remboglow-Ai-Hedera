@@ -26,15 +26,15 @@ const Footer = () => {
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-[#e2b8e6] shadow-lg">
                 <img 
-                  src="https://images.pexels.com/photos/3373736/pexels-photo-3373736.jpeg?auto=compress&cs=tinysrgb&w=100" 
+                  src="https://i.pinimg.com/736x/2a/b8/93/2ab89346194ee5eea1e1990da184629d.jpg" 
                   alt="Face-Fit Logo" 
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-xl font-bold text-white">Face-Fit</span>
+              <span className="text-xl font-bold text-white">face-fit</span>
             </div>
             <p className="text-gray-400 leading-relaxed">
-              AI-powered beauty and fashion recommendations that celebrate your unique style and cultural heritage.
+              Data-powered beauty and fashion recommendations that celebrate your unique style and cultural heritage.
             </p>
           </div>
 
@@ -58,8 +58,8 @@ const Footer = () => {
           <div className="md:col-span-1">
             <h3 className="text-lg font-bold text-white mb-4">Contact</h3>
             <div className="space-y-2 text-gray-400">
-              <p>hello@face-fit.com</p>
-              <p>+254 700 123 456</p>
+              <p>facefit643@gmail.com</p>
+              <p>+254 748 163 492</p>
               <p>Nairobi, Kenya</p>
             </div>
           </div>
@@ -67,10 +67,10 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 pt-8 text-center">
           <p className="text-gray-400 flex items-center justify-center">
-            Made with <Heart className="w-4 h-4 text-red-500 mx-1" /> by Face-Fit Team
+            Made with <Heart className="w-4 h-4 text-red-500 mx-1" /> by Data Scientists
           </p>
           <p className="text-gray-500 text-sm mt-2">
-            © 2025 Face-Fit. All rights reserved.
+            © 2025 face-fit. All rights reserved.
           </p>
         </div>
       </div>

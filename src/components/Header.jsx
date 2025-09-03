@@ -1,157 +1,184 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Menu, X } from "lucide-react";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   const navItems = [
-    { name: 'Home', href: '#home' },
-    { name: 'Features', href: '#features' },
-    { name: 'About', href: '#about' },
-    { name: 'Contact', href: '#contact' },
-    { name: 'Get Started', href: '#features' }
+    { name: "Home", href: "#home" },
+    { name: "Features", href: "#features" },
+    { name: "About", href: "#about" },
+    { name: "Contact", href: "#contact" },
+    { name: "Get Started", href: "#features" },
   ];
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const scrollToSection = (href) => {
     const element = document.querySelector(href);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      element.scrollIntoView({ behavior: "smooth" });
     }
-    // Close menu smoothly after clicking a link
-    setTimeout(() => setIsMenuOpen(false), 300);
+    setIsMenuOpen(false); // close menu after click
   };
 
-  // Close menu when clicking outside or pressing Escape key
+  // Close menu on outside click or Esc
   useEffect(() => {
     if (!isMenuOpen) return;
-    
+
     const handleClickOutside = (e) => {
-      if (!e.target.closest('.nav-footer') && !e.target.closest('.hamburger-btn')) {
+      if (
+        !e.target.closest(".mobile-menu") &&
+        !e.target.closest(".hamburger-btn")
+      ) {
         setIsMenuOpen(false);
       }
     };
 
     const handleEscapeKey = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setIsMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscapeKey);
-    
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscapeKey);
+
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscapeKey);
     };
   }, [isMenuOpen]);
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-[#e2b8e6]/95 backdrop-blur-sm shadow-lg' 
-          : 'bg-transparent'
-      }`}>
+      {/* Header */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled
+            ? "bg-[#e2b8e6]/95 backdrop-blur-sm shadow-lg"
+            : "bg-transparent"
+        }`}
+      >
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             {/* Logo */}
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-lg">
-                <img 
-                  src="https://i.pinimg.com/736x/2a/b8/93/2ab89346194ee5eea1e1990da184629d.jpg" 
-                  alt="Face-Fit Logo" 
+                <img
+                  src="https://i.pinimg.com/736x/2a/b8/93/2ab89346194ee5eea1e1990da184629d.jpg"
+                  alt="Face-Fit Logo"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-2xl font-bold text-[#b1006e]">face-fit</span>
+              <span className="text-2xl font-bold text-[#b1006e]">
+                face-fit
+              </span>
             </div>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Nav */}
             <div className="hidden md:flex items-center space-x-8">
               {navItems.map((item) => (
                 <button
                   key={item.name}
                   onClick={() => scrollToSection(item.href)}
-                  className="text-white hover:text-purple-200 font-medium transition-colors duration-200 relative group"
+                  className="text-gray-800 hover:text-[#b1006e] font-medium transition-colors duration-200 relative group"
                 >
                   {item.name}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-white transition-all duration-300 group-hover:w-full"></span>
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#b1006e] transition-all duration-300 group-hover:w-full"></span>
                 </button>
               ))}
             </div>
 
-            {/* Mobile Hamburger Button - Rounded and Stylish */}
+            {/* Hamburger Button */}
             <button
-              className="hamburger-btn md:hidden p-3 rounded-full bg-white/20 hover:bg-white/30 transition-all duration-300 flex items-center justify-center w-14 h-14 shadow-lg hover:shadow-xl"
+              className="hamburger-btn md:hidden p-2 rounded-full bg-white shadow-md hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center w-12 h-12 mr-6"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label="Toggle menu"
             >
               {isMenuOpen ? (
-                <X className="w-6 h-6 text-white transition-transform duration-300" />
+                <X className="w-6 h-6 text-[#b1006e]" />
               ) : (
-                <Menu className="w-6 h-6 text-white transition-transform duration-300" />
+                <Menu className="w-6 h-6 text-[#b1006e]" />
               )}
             </button>
           </div>
         </nav>
       </header>
 
-      {/* Navigation Footer - Slides from left */}
-      <div className={`nav-footer fixed bottom-0 left-0 right-0 z-40 transition-all duration-500 ease-in-out ${
-        isMenuOpen 
-          ? 'translate-y-0 opacity-100' 
-          : 'translate-y-full opacity-0 pointer-events-none'
-      }`}>
-        <div className="bg-gradient-to-r from-[#e2b8e6] to-purple-400 rounded-t-3xl shadow-2xl p-6">
-          {/* Close button at top */}
-          <div className="flex justify-end mb-4">
+      {/* Mobile Menu - Left Drawer */}
+      <div
+        className={`mobile-menu fixed inset-0 z-50 transition-all duration-300 ease-in-out ${
+          isMenuOpen
+            ? "opacity-100 visible"
+            : "opacity-0 invisible pointer-events-none"
+        }`}
+      >
+        {/* Overlay */}
+        <div
+          className="absolute inset-0 bg-black bg-opacity-50"
+          onClick={() => setIsMenuOpen(false)}
+        />
+
+        {/* Drawer */}
+        <div
+          className={`absolute top-0 left-0 h-full w-72 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+            isMenuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex flex-col p-8 gap-6 h-full">
+            {/* Close Button */}
             <button
               onClick={() => setIsMenuOpen(false)}
-              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all duration-300"
+              className="self-end p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
               aria-label="Close menu"
             >
-              <X className="w-5 h-5 text-white" />
+              <X className="w-6 h-6 text-gray-600" />
             </button>
-          </div>
 
-          {/* Navigation Links */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            {navItems.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => scrollToSection(item.href)}
-                className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl p-4 text-white font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
-              >
-                {item.name}
-              </button>
-            ))}
-          </div>
+            {/* Logo */}
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-[#e2b8e6] shadow-lg">
+                <img
+                  src="https://media.istockphoto.com/id/1411160815/photo/a-stylish-young-black-woman-with-an-afro-and-a-trendy-style-portrait-of-an-african-high.jpg?b=1&s=612x612&w=0&k=20&c=SwXiH8FYPUTPUk96qd0F8P3fnwPVuLv2XJivlmbVqs4="
+                  alt="Face-Fit Logo"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <span className="text-2xl font-bold text-[#b1006e]">
+                face-fit
+              </span>
+            </div>
 
-          {/* Footer Info */}
-          <div className="text-center text-white/90">
-            <p className="text-sm mb-2">© 2025 Face-Fit</p>
-            <p className="text-xs opacity-80">AI-powered beauty recommendations</p>
+            {/* Nav Links */}
+            <div className="flex flex-col gap-4 flex-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.name}
+                  onClick={() => scrollToSection(item.href)}
+                  className="w-full text-left text-gray-800 hover:text-[#b1006e] font-medium px-4 py-3 rounded-lg hover:bg-purple-50 transition-colors duration-200 text-lg"
+                >
+                  {item.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="pt-8 border-t border-gray-200">
+              <p className="text-gray-600 text-sm">
+                © 2025 Face-Fit. All rights reserved.
+              </p>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Overlay - Only visible when menu is open */}
-      {isMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-30 z-30 transition-opacity duration-500 ease-in-out"
-          onClick={() => setIsMenuOpen(false)}
-        />
-      )}
     </>
   );
 };

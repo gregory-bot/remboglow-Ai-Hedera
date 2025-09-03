@@ -20,7 +20,7 @@ const About = () => {
     },
     {
       icon: <Sparkles className="w-8 h-8 text-white" />,
-      title: 'AI Innovation',
+      title: 'Innovation',
       description: 'Cutting-edge technology for personalized results',
       color: 'bg-purple-500'
     },
@@ -43,13 +43,12 @@ const About = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-            About Face-Fit
+            About face-fit
           </h2>
           <div className="w-24 h-1 bg-[#e2b8e6] mx-auto mb-6"></div>
           <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-            Face-Fit is revolutionizing the beauty and fashion industry by using advanced AI technology 
-            to provide personalized recommendations that celebrate African beauty. Our mission is to 
-            eliminate the guesswork in beauty routines while promoting inclusivity and cultural relevance.
+            face-fit is revolutionizing the beauty and fashion industry by using technology 
+            to provide personalized recommendations that celebrate African beauty.
           </p>
         </motion.div>
 
@@ -85,9 +84,7 @@ const About = () => {
         >
           <h3 className="text-2xl font-bold mb-4">Our Vision</h3>
           <p className="text-lg leading-relaxed opacity-90 max-w-3xl mx-auto">
-            We envision a world where everyone can confidently express their unique beauty, 
-            supported by technology that understands and celebrates diversity. Face-Fit is 
-            more than an app – it's a movement towards inclusive, personalized beauty for all.
+            We envision a world where everyone can confidently express their unique beauty.
           </p>
         </motion.div>
       </div>

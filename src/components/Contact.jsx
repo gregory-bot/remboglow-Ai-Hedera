@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, MapPin, Phone, Send } from 'lucide-react';
+import { Mail, MapPin, Phone, Send, AlertCircle } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config.jsx';
 import toast from 'react-hot-toast';
-import About from './About';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -13,6 +12,7 @@ const Contact = () => {
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [firestoreError, setFirestoreError] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -24,8 +24,10 @@ const Contact = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFirestoreError(false);
     
     try {
+      // Try to save to Firebase first
       await addDoc(collection(db, 'contacts'), {
         ...formData,
         timestamp: new Date(),
@@ -35,25 +37,31 @@ const Contact = () => {
       toast.success('Message sent successfully!');
       setFormData({ name: '', email: '', message: '' });
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Failed to send message. Please try again.');
+      console.error('Error sending message to Firestore:', error);
+      setFirestoreError(true);
+      toast.error('Failed to save to database, but WhatsApp message will still open.');
     } finally {
       setIsSubmitting(false);
     }
+    
+    // Always open WhatsApp regardless of Firestore success
+    const whatsappMessage = `New Feedback from FaceFit:%0A%0AName: ${formData.name}%0AEmail: ${formData.email}%0AMessage: ${formData.message}`;
+    window.open(`https://wa.me/254748163492?text=${whatsappMessage}`, '_blank');
   };
 
   const contactInfo = [
     {
       icon: <Mail className="w-6 h-6 text-white" />,
       title: 'Email',
-      value: 'hello@face-fit.com',
+      value: 'facefit643@gmail.com',
       color: 'bg-blue-500'
     },
     {
       icon: <Phone className="w-6 h-6 text-white" />,
       title: 'Phone',
-      value: '+254 700 123 456',
-      color: 'bg-green-500'
+      value: '+254 748 163 492',
+      color: 'bg-green-500',
+      link: 'tel:+254748163492'
     },
     {
       icon: <MapPin className="w-6 h-6 text-white" />,
@@ -66,6 +74,7 @@ const Contact = () => {
   return (
     <section className="py-20 bg-gradient-to-br from-[#e2b8e6] to-[#d8a5dc]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -78,7 +87,7 @@ const Contact = () => {
           </h2>
           <div className="w-24 h-1 bg-white mx-auto mb-6"></div>
           <p className="text-xl text-white/90 max-w-3xl mx-auto">
-            Have questions or feedback? We'd love to hear from you. Reach out and let's connect!
+            Have questions or feedback? We'd love to hear from you.
           </p>
         </motion.div>
 
@@ -89,9 +98,21 @@ const Contact = () => {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8"
+            className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 relative"
           >
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Send us a message</h3>
+            {firestoreError && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start">
+                <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-yellow-800">Database Connection Issue</p>
+                  <p className="text-yellow-700 text-sm mt-1">
+                    Your message will still be sent via WhatsApp, but we couldn't save it to our database. Please check your internet connection.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Send us any feedback</h3>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
@@ -122,7 +143,7 @@ const Contact = () => {
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#e2b8e6] focus:border-transparent transition-colors duration-200"
-                  placeholder="your@email.com"
+                  placeholder="your.email@example.com"
                 />
               </div>
               
@@ -155,7 +176,7 @@ const Contact = () => {
                 ) : (
                   <>
                     <Send className="w-5 h-5" />
-                    <span>Send Message</span>
+                    <span>Send via WhatsApp</span>
                   </>
                 )}
               </button>
@@ -181,33 +202,33 @@ const Contact = () => {
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-1">{info.title}</h4>
-                      <p className="text-gray-600">{info.value}</p>
+                      {info.link ? (
+                        <a href={info.link} className="text-gray-600 hover:text-purple-600 transition-colors">
+                          {info.value}
+                        </a>
+                      ) : (
+                        <p className="text-gray-600">{info.value}</p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Why Choose Face-Fit?</h3>
-              <ul className="space-y-3 text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-[#e2b8e6] rounded-full"></span>
-                  <span>AI-powered personalized recommendations</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-[#e2b8e6] rounded-full"></span>
-                  <span>Culturally relevant beauty advice</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-[#e2b8e6] rounded-full"></span>
-                  <span>Inclusive for all abilities</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-[#e2b8e6] rounded-full"></span>
-                  <span>Supporting local businesses</span>
-                </li>
-              </ul>
+              
+              <div className="mt-8 p-4 bg-green-50 rounded-lg border border-green-200">
+                <h4 className="font-semibold text-green-800 mb-2">Direct WhatsApp Contact</h4>
+                <p className="text-green-700 text-sm">
+                  After submitting the form, WhatsApp will open with your message ready to send to our team.
+                </p>
+                <a 
+                  href="https://wa.me/254748163492" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Message us directly
+                </a>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -216,4 +237,4 @@ const Contact = () => {
   );
 };
 
-export default About;
+export default Contact;

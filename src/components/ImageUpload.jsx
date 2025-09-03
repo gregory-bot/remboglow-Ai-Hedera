@@ -1,326 +1,298 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Camera, Loader, CreditCard, X, Sparkles } from 'lucide-react'; // Added Sparkles import
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../firebase/config.jsx';
-import { analyzeImage } from '../services/geminiService.jsx';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect, useRef } from "react";
+import { analyzeImage } from "../services/geminiService";
+import { Camera, Loader, CheckCircle } from "lucide-react";
+
+/**
+ * Business rules:
+ *  - First image upload is free.
+ *  - From the second upload onwards, user must pay KES 200 via Paystack.
+ *  - No login; tracked with localStorage + sessionStorage.
+ *    - localStorage.ff_uploads_count → number of completed analyses.
+ *    - sessionStorage.paystack_paid → 'true' if recent payment succeeded.
+ */
+const FREE_UPLOADS = 1;
+const PRICE_KES = 50;
+const BACKEND_BASE = "https://face-fit.onrender.com"; // Express backend
 
 const ImageUpload = () => {
   const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState(null);
-  const [uploadCount, setUploadCount] = useState(0);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [error, setError] = useState("");
+  const [paid, setPaid] = useState(false);
+  const [uploadsCount, setUploadsCount] = useState(
+    Number(localStorage.getItem("ff_uploads_count") || "0")
+  );
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onload = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
-    }
-  };
+  const fileInputRef = useRef(null);
 
-  const handleAnalyze = async () => {
-    if (!selectedImage) {
-      toast.error('Please select an image first');
-      return;
-    }
+  // Check if user just returned from Paystack
+  useEffect(() => {
+    const paidFlag = sessionStorage.getItem("paystack_paid");
+    if (paidFlag === "true") {
+      setPaid(true);
+      sessionStorage.removeItem("paystack_paid");
 
-    // Check if this is the second upload attempt
-    if (uploadCount >= 1) {
-      setShowPaymentModal(true);
-      return;
-    }
-
-    setIsAnalyzing(true);
-    try {
-      const result = await analyzeImage(selectedImage);
-      
-      if (result.error) {
-        toast.error(result.message || 'Failed to analyze image');
-        return;
+      const pending = sessionStorage.getItem("pending_upload_request");
+      if (pending) {
+        sessionStorage.removeItem("pending_upload_request");
+        alert("✅ Payment confirmed — you can now add more images.");
       }
-
-      setAnalysis(result);
-      setUploadCount(prev => prev + 1);
-      
-      // Save to Firebase
-      await addDoc(collection(db, 'analyses'), {
-        timestamp: new Date(),
-        result: result,
-        imageSize: selectedImage.size,
-        imageType: selectedImage.type
-      });
-
-      toast.success('Analysis complete!');
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to analyze image');
-    } finally {
-      setIsAnalyzing(false);
     }
-  };
+  }, []);
 
-  const handlePayment = () => {
-    // Simulate payment process
-    toast.success('Payment successful! You can now upload more images.');
-    setShowPaymentModal(false);
-    setUploadCount(0); // Reset count after payment
-  };
+  // Select image
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const resetUpload = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size should be less than 5MB.");
+      return;
+    }
+
+    setSelectedImage(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setError("");
     setAnalysis(null);
   };
 
+  // Initialize Paystack checkout
+  const initiatePayment = async () => {
+    try {
+      const response = await fetch(`${BACKEND_BASE}/api/paystack/pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "testuser@example.com", // dummy email until auth is added
+          amount: PRICE_KES * 100, // Paystack expects kobo
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend error: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log("Pay init response:", data);
+
+      if (data?.status && data?.data?.authorization_url) {
+        sessionStorage.setItem("pending_upload_request", "true");
+        window.location.href = data.data.authorization_url; // redirect to Paystack
+      } else {
+        alert("❌ Payment initialization failed. Please try again.");
+      }
+    } catch (err) {
+      console.error("Payment init error:", err);
+      alert(`⚠️ Payment initiation failed: ${err.message}`);
+    }
+  };
+
+  // Check if user can upload again
+  const canAddAnotherImage = () => {
+    if (uploadsCount < FREE_UPLOADS) return true;
+    if (paid) return true;
+    return false;
+  };
+
+  // Add new image
+  const handleAddMore = () => {
+    if (!canAddAnotherImage()) {
+      initiatePayment();
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  // Upload + AI analysis
+  const handleUploadAndAnalyze = async () => {
+    if (!selectedImage) return;
+
+    setAnalyzing(true);
+    setError("");
+
+    try {
+      const result = await analyzeImage(selectedImage);
+
+      if (result?.error) {
+        setError(result.message || "Analysis failed.");
+      } else {
+        setAnalysis(result);
+
+        const newCount = uploadsCount + 1;
+        setUploadsCount(newCount);
+        localStorage.setItem("ff_uploads_count", String(newCount));
+      }
+    } catch (e) {
+      console.error("Analysis error:", e);
+      setError("Failed to process image. Please try again.");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const resetSelection = () => {
+    setSelectedImage(null);
+    setPreviewUrl(null);
+    setAnalysis(null);
+    setError("");
+  };
+
   return (
-    <section className="py-20 bg-gradient-to-br from-[#e2b8e6] to-[#d8a5dc]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-            Try Face-Fit Now
-          </h2>
-          <div className="w-24 h-1 bg-white mx-auto mb-6"></div>
-          <p className="text-xl text-white/90 max-w-3xl mx-auto">
-            Upload your photo and get instant AI-powered beauty and fashion recommendations.
+    <div className="max-w-4xl mx-auto p-8">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-white mb-4">
+          Try it out. Upload Your Photo
+        </h2>
+        <p className="text-gray-600">
+          First photo is free. Additional uploads cost KES {PRICE_KES}.
+        </p>
+        {uploadsCount >= FREE_UPLOADS && !paid && (
+          <p className="text-sm text-orange-600 mt-2">
+            You’ve used your free upload. Pay KES {PRICE_KES} to add more images.
           </p>
-        </motion.div>
+        )}
+      </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Upload Section */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8"
+      {/* Upload Zone */}
+      {!previewUrl ? (
+        <div className="border-2 border-dashed border-purple-600 rounded-xl p-12 text-center hover:border-yellow-400 transition-colors duration-200">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          <button
+            onClick={handleAddMore}
+            className="cursor-pointer inline-flex flex-col items-center"
           >
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-              Upload Your Photo
-            </h3>
-
-            {!imagePreview ? (
-              <div className="border-2 border-dashed border-[#e2b8e6] rounded-xl p-12 text-center hover:border-purple-400 transition-colors duration-300">
-                <Camera className="w-16 h-16 text-[#e2b8e6] mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">
-                  Choose a clear photo of your face for the best results
-                </p>
-                <label className="bg-[#e2b8e6] hover:bg-purple-400 text-white px-6 py-3 rounded-full cursor-pointer inline-flex items-center transition-colors duration-200">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Select Image
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
-                </label>
+            <Camera className="w-16 h-16 text-blue-700 mx-auto mb-4" />
+            <p className="text-xl font-semibold text-black mb-2">
+              Choose Your Photo
+            </p>
+            <p className="text-gray-600">Click to upload or drag and drop</p>
+            <p className="text-sm text-gray-500 mt-2">PNG, JPG up to 5MB</p>
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Preview & Actions */}
+          <div className="bg-white rounded-xl p-6 shadow-lg">
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="md:w-1/2">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-64 object-cover rounded-lg"
+                />
               </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Selected"
-                    className="w-full h-64 object-cover rounded-xl shadow-lg"
-                  />
+              <div className="md:w-1/2 flex flex-col justify-center">
+                <h3 className="text-xl font-semibold text-black mb-4">
+                  Ready for Analysis
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  We’ll analyze your facial features and suggest personalized
+                  makeup & fashion ideas.
+                </p>
+                <div className="flex gap-4 flex-wrap">
                   <button
-                    onClick={resetUpload}
-                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-colors duration-200"
+                    onClick={handleUploadAndAnalyze}
+                    disabled={analyzing}
+                    className="flex-1 min-w-[180px] bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
                   >
-                    <X className="w-4 h-4" />
+                    {analyzing ? (
+                      <>
+                        <Loader className="w-5 h-5 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5" />
+                        Analyze My Look
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={resetSelection}
+                    className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    Choose Different Photo
+                  </button>
+
+                  <button
+                    onClick={handleAddMore}
+                    className="px-6 py-3 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors duration-200"
+                  >
+                    Add More Images
                   </button>
                 </div>
-                
-                <button
-                  onClick={handleAnalyze}
-                  disabled={isAnalyzing}
-                  className="w-full bg-[#e2b8e6] hover:bg-purple-400 disabled:bg-purple-300 text-white py-4 rounded-xl font-bold text-lg transition-colors duration-200 flex items-center justify-center"
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <Loader className="w-5 h-5 mr-2 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    'Analyze My Look'
-                  )}
-                </button>
-
-                {uploadCount >= 1 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-yellow-800 text-sm">
-                      🎉 You've used your free analysis! Upgrade for unlimited access.
-                    </p>
-                  </div>
-                )}
               </div>
-            )}
-          </motion.div>
+            </div>
+          </div>
 
-          {/* Results Section */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8"
-          >
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-              Your Results
-            </h3>
-
-            {!analysis ? (
-              <div className="text-center py-12">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="w-12 h-12 text-gray-400" />
-                </div>
-                <p className="text-gray-500">
-                  Upload and analyze your photo to see personalized recommendations here.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {analysis.skinTone && (
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <h4 className="font-bold text-purple-800 mb-2">Skin Analysis</h4>
-                    <p className="text-purple-700">
-                      <strong>Skin Tone:</strong> {analysis.skinTone}
-                    </p>
-                    {analysis.facialShape && (
-                      <p className="text-purple-700">
-                        <strong>Face Shape:</strong> {analysis.facialShape}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {analysis.makeupRecommendations && (
-                  <div className="bg-pink-50 p-4 rounded-lg">
-                    <h4 className="font-bold text-pink-800 mb-2">Makeup Recommendations</h4>
-                    <div className="space-y-2 text-sm text-pink-700">
-                      {analysis.makeupRecommendations.foundation && (
-                        <p><strong>Foundation:</strong> {analysis.makeupRecommendations.foundation}</p>
-                      )}
-                      {analysis.makeupRecommendations.lipColor && (
-                        <p><strong>Lip Color:</strong> {analysis.makeupRecommendations.lipColor}</p>
-                      )}
-                      {analysis.makeupRecommendations.eyeMakeup && (
-                        <p><strong>Eye Makeup:</strong> {analysis.makeupRecommendations.eyeMakeup}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {analysis.fashionRecommendations && (
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-bold text-blue-800 mb-2">Fashion Recommendations</h4>
-                    <div className="space-y-2 text-sm text-blue-700">
-                      {analysis.fashionRecommendations.style && (
-                        <p><strong>Style:</strong> {analysis.fashionRecommendations.style}</p>
-                      )}
-                      {analysis.fashionRecommendations.colors && (
-                        <p><strong>Colors:</strong> {analysis.fashionRecommendations.colors}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {analysis.productSuggestions && analysis.productSuggestions.length > 0 && (
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-bold text-green-800 mb-3">Product Suggestions</h4>
-                    <div className="space-y-3">
-                      {analysis.productSuggestions.slice(0, 3).map((product, index) => (
-                        <div key={index} className="flex items-center space-x-3 bg-white p-3 rounded-lg">
-                          {product.imageUrl && (
-                            <img 
-                              src={product.imageUrl} 
-                              alt={product.product}
-                              className="w-12 h-12 object-cover rounded-lg"
-                            />
-                          )}
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{product.brand} - {product.product}</p>
-                            <p className="text-sm text-gray-600">{product.shade}</p>
-                            <p className="text-sm font-bold text-green-600">{product.price}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* Payment Modal */}
-        <AnimatePresence>
-          {showPaymentModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowPaymentModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl p-8 w-full max-w-md"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-[#e2b8e6] rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CreditCard className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                    Upgrade to Premium
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    You've used your free analysis! Upgrade to get unlimited AI-powered beauty recommendations.
-                  </p>
-                  
-                  <div className="bg-gradient-to-r from-[#e2b8e6] to-purple-400 p-6 rounded-xl mb-6">
-                    <div className="text-white text-center">
-                      <p className="text-3xl font-bold mb-2">KSH 500</p>
-                      <p className="text-sm opacity-90">Unlimited analyses for 30 days</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <button
-                      onClick={handlePayment}
-                      className="w-full bg-[#e2b8e6] hover:bg-purple-400 text-white py-3 rounded-xl font-bold transition-colors duration-200"
-                    >
-                      Pay Now
-                    </button>
-                    <button
-                      onClick={() => setShowPaymentModal(false)}
-                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-medium transition-colors duration-200"
-                    >
-                      Maybe Later
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
+              {error}
+            </div>
           )}
-        </AnimatePresence>
-      </div>
-    </section>
+
+          {/* AI Analysis Result */}
+          {analysis && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="w-6 h-6" />
+                <span className="text-lg font-semibold">
+                  Analysis Complete!
+                </span>
+              </div>
+
+              {/* Handle both structured and free-text responses */}
+              {analysis.analysis ? (
+                <div className="bg-white rounded-xl p-6 shadow-lg">
+                  <h3 className="text-2xl font-bold text-black mb-4">
+                    Your Personalized Recommendations
+                  </h3>
+                  <pre className="whitespace-pre-wrap text-black leading-relaxed">
+                    {analysis.analysis}
+                  </pre>
+                </div>
+              ) : (
+                <>
+                  {/* Example structured display */}
+                  {analysis.skinTone && analysis.facialShape && (
+                    <div className="bg-white rounded-xl p-6 shadow-lg">
+                      <h3 className="text-2xl font-bold text-black mb-4">
+                        Face Analysis
+                      </h3>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="font-semibold text-purple-600 mb-2">
+                            Skin Tone
+                          </h4>
+                          <p className="text-black">{analysis.skinTone}</p>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-purple-600 mb-2">
+                            Facial Shape
+                          </h4>
+                          <p className="text-black">{analysis.facialShape}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
