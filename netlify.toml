@@ -1,0 +1,22 @@
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Example: old routes to new ones
+[[redirects]]
+  from = "/old-about"
+  to = "/about"
+  status = 301
+
+[[redirects]]
+  from = "/old-contact"
+  to = "/contact"
+  status = 301
+
+# Force HTTPS
+[[redirects]]
+  from = "http://*"
+  to = "https://:splat"
+  status = 301
+  force = true

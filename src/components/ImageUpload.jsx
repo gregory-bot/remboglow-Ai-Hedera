@@ -2,14 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { analyzeImage } from "../services/geminiService";
 import { Camera, Loader, CheckCircle } from "lucide-react";
 
-/**
- * Business rules:
- *  - First image upload is free.
- *  - From the second upload onwards, user must pay KES 200 via Paystack.
- *  - No login; tracked with localStorage + sessionStorage.
- *    - localStorage.ff_uploads_count → number of completed analyses.
- *    - sessionStorage.paystack_paid → 'true' if recent payment succeeded.
- */
 const FREE_UPLOADS = 1;
 const PRICE_KES = 50;
 const BACKEND_BASE = "https://face-fit.onrender.com"; // Express backend
@@ -20,7 +12,9 @@ const ImageUpload = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState("");
-  const [paid, setPaid] = useState(false);
+  const [paid, setPaid] = useState(
+    localStorage.getItem("ff_paid") === "true" // 🔑 persist paid state
+  );
   const [uploadsCount, setUploadsCount] = useState(
     Number(localStorage.getItem("ff_uploads_count") || "0")
   );
@@ -32,6 +26,7 @@ const ImageUpload = () => {
     const paidFlag = sessionStorage.getItem("paystack_paid");
     if (paidFlag === "true") {
       setPaid(true);
+      localStorage.setItem("ff_paid", "true"); // 🔑 persist paid across refresh
       sessionStorage.removeItem("paystack_paid");
 
       const pending = sessionStorage.getItem("pending_upload_request");
@@ -65,7 +60,7 @@ const ImageUpload = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: "testuser@example.com", // dummy email until auth is added
+          email: "testuser@example.com",
           amount: PRICE_KES * 100, // Paystack expects kobo
         }),
       });
@@ -76,11 +71,10 @@ const ImageUpload = () => {
       }
 
       const data = await response.json();
-      console.log("Pay init response:", data);
 
       if (data?.status && data?.data?.authorization_url) {
         sessionStorage.setItem("pending_upload_request", "true");
-        window.location.href = data.data.authorization_url; // redirect to Paystack
+        window.location.href = data.data.authorization_url;
       } else {
         alert("❌ Payment initialization failed. Please try again.");
       }
@@ -252,7 +246,6 @@ const ImageUpload = () => {
                 </span>
               </div>
 
-              {/* Handle both structured and free-text responses */}
               {analysis.analysis ? (
                 <div className="bg-white rounded-xl p-6 shadow-lg">
                   <h3 className="text-2xl font-bold text-black mb-4">
@@ -264,7 +257,6 @@ const ImageUpload = () => {
                 </div>
               ) : (
                 <>
-                  {/* Example structured display */}
                   {analysis.skinTone && analysis.facialShape && (
                     <div className="bg-white rounded-xl p-6 shadow-lg">
                       <h3 className="text-2xl font-bold text-black mb-4">

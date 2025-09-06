@@ -67,7 +67,7 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 pt-8 text-center">
           <p className="text-gray-400 flex items-center justify-center">
-            Made with <Heart className="w-4 h-4 text-red-500 mx-1" /> by Data Scientists
+            Made by Data Scientists
           </p>
           <p className="text-gray-500 text-sm mt-2">
             © 2025 face-fit. All rights reserved.
