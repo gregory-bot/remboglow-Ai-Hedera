@@ -9,6 +9,7 @@ const Header = () => {
     { name: "Home", href: "#home" },
     { name: "Features", href: "#features" },
     { name: "About", href: "#about" },
+    { name: "Feedback", href: "#feedback" },
     { name: "Contact", href: "#contact" },
     { name: "Get Started", href: "#features" },
   ];
@@ -74,12 +75,12 @@ const Header = () => {
               <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-lg">
                 <img
                   src="https://i.pinimg.com/736x/2a/b8/93/2ab89346194ee5eea1e1990da184629d.jpg"
-                  alt="Face-Fit Logo"
+                  alt="remboglow Logo"
                   className="w-full h-full object-cover"
                 />
               </div>
               <span className="text-2xl font-bold text-[#b1006e]">
-                face-fit
+                remboglow
               </span>
             </div>
 
@@ -148,12 +149,12 @@ const Header = () => {
               <div className="w-12 h-12 rounded-full overflow-hidden bg-[#e2b8e6] shadow-lg">
                 <img
                   src="https://media.istockphoto.com/id/1411160815/photo/a-stylish-young-black-woman-with-an-afro-and-a-trendy-style-portrait-of-an-african-high.jpg?b=1&s=612x612&w=0&k=20&c=SwXiH8FYPUTPUk96qd0F8P3fnwPVuLv2XJivlmbVqs4="
-                  alt="Face-Fit Logo"
+                  alt="remboglow Logo"
                   className="w-full h-full object-cover"
                 />
               </div>
               <span className="text-2xl font-bold text-[#b1006e]">
-                face-fit
+                remboglow
               </span>
             </div>
 
@@ -173,7 +174,7 @@ const Header = () => {
             {/* Footer */}
             <div className="pt-8 border-t border-gray-200">
               <p className="text-gray-600 text-sm">
-                © 2025 Face-Fit. All rights reserved.
+                © 2025 remboglow.com. All rights reserved.
               </p>
             </div>
           </div>

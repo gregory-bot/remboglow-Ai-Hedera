@@ -41,7 +41,7 @@ const Problems = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-            Problem face-fit Solves
+            Problem remboglow Solves
           </h2>
           <div className="w-24 h-1 bg-[#e2b8e6] mx-auto mb-6"></div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">

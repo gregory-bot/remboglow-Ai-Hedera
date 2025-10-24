@@ -10,7 +10,7 @@ const firebaseConfig = {
   storageBucket: "agri-c.firebasestorage.app",
   messagingSenderId: "456926063869",
   appId: "1:456926063869:web:47accdf164bc1ffee1e294",
-  measurementId: "G-88JFLNQJGD"
+  measurementId: "G-4FRC6TM73F"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();

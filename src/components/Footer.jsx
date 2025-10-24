@@ -27,11 +27,11 @@ const Footer = () => {
               <div className="w-10 h-10 rounded-full overflow-hidden bg-[#e2b8e6] shadow-lg">
                 <img 
                   src="https://i.pinimg.com/736x/2a/b8/93/2ab89346194ee5eea1e1990da184629d.jpg" 
-                  alt="Face-Fit Logo" 
+                  alt="remboglow Logo" 
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-xl font-bold text-white">face-fit</span>
+              <span className="text-xl font-bold text-white">remboglow</span>
             </div>
             <p className="text-gray-400 leading-relaxed">
               Data-powered beauty and fashion recommendations that celebrate your unique style and cultural heritage.
@@ -70,7 +70,7 @@ const Footer = () => {
             Made by Data Scientists
           </p>
           <p className="text-gray-500 text-sm mt-2">
-            © 2025 face-fit. All rights reserved.
+            © 2025 remboglow.com. All rights reserved.
           </p>
         </div>
       </div>

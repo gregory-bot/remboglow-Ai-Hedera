@@ -43,11 +43,11 @@ const About = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-            About face-fit
+            About remboglow
           </h2>
           <div className="w-24 h-1 bg-[#e2b8e6] mx-auto mb-6"></div>
           <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-            face-fit is revolutionizing the beauty and fashion industry by using technology 
+            remboglow is revolutionizing the beauty and fashion industry by using technology 
             to provide personalized recommendations that celebrate African beauty.
           </p>
         </motion.div>

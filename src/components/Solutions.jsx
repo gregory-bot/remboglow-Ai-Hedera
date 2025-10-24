@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Camera, Palette, ShoppingBag, Sparkles, Users, BarChart2 } from 'lucide-react';
+import { Camera, Palette, ShoppingBag, Sparkles,  Clock, Users, BarChart2 } from 'lucide-react';
 
 const Solutions = () => {
   const solutions = [
@@ -13,6 +13,11 @@ const Solutions = () => {
       icon: <Palette className="w-8 h-8 text-purple-500" />,
       title: 'Makeup Picks',
       description: 'Get best shades for you.',
+    },
+        {
+      icon: <Clock className="w-8 h-8 text-purple-500" />,
+      title: 'Routine Builder',
+      description: 'Create your personalized skincare & makeup routine.',
     },
     {
       icon: <ShoppingBag className="w-8 h-8 text-purple-500" />,

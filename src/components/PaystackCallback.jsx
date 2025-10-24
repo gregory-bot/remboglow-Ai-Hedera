@@ -9,7 +9,7 @@ export default function PaystackCallback() {
 
     if (!reference) {
       // Redirect to Netlify domain instead of internal route
-      window.location.href = "https://face-fit-ke.netlify.app/";
+      window.location.href = "http://remboglow.com/";
       return;
     }
 
@@ -26,15 +26,15 @@ export default function PaystackCallback() {
           sessionStorage.setItem("paystack_reference", reference);
 
           // Redirect to Netlify domain
-          window.location.href = "https://face-fit-ke.netlify.app/";
+          window.location.href = "http://remboglow.com/";
         } else {
           alert("❌ Payment verification failed.");
-          window.location.href = "https://face-fit-ke.netlify.app/";
+          window.location.href = "http://remboglow.com/";
         }
       } catch (err) {
         console.error("Verification error:", err);
         alert("⚠️ Payment verification failed.");
-        window.location.href = "https://face-fit-ke.netlify.app/";
+        window.location.href = "http://remboglow.com/";
       }
     };
 
