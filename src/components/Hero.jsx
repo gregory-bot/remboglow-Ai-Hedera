@@ -6,7 +6,7 @@ const Hero = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const heroImages = [
-    "https://imgproxy.services.pitch.com/_/w:1162/h:858/resizing_type:fit/format:avif/plain/pitch-assets-ccb95893-de3f-4266-973c-20049231b248/071e7e57-0257-446c-9403-259d8213a415",
+    "https://i.postimg.cc/Y0MPjJRV/tbt.jpg",
     "https://i.pinimg.com/736x/2a/b8/93/2ab89346194ee5eea1e1990da184629d.jpg",
     "https://i.pinimg.com/1200x/b0/0c/f7/b00cf77bd76332e5b598cd5c04b7964c.jpg"
   ];
@@ -65,40 +65,32 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="relative"
           >
-            <div className="relative w-full max-w-md mx-auto">
+            <div className="relative w-full max-w-md mx-auto h-96 overflow-hidden rounded-2xl shadow-2xl bg-pink-200">
               {heroImages.map((image, index) => (
-                <motion.img
+                <motion.div
                   key={index}
-                  src={image}
-                  alt={`Beauty inspiration ${index + 1}`}
-                  className={`w-full h-96 object-cover rounded-2xl shadow-2xl transition-opacity duration-1000 ${
-                    index === currentImageIndex ? 'opacity-100' : 'opacity-0 absolute inset-0'
-                  }`}
-                  initial={{ scale: 0.8, opacity: 0 }}
+                  className="absolute inset-0"
+                  initial={false}
                   animate={{
-                    scale: index === currentImageIndex ? 1 : 0.8,
-                    opacity: index === currentImageIndex ? 1 : 0
+                    opacity: index === currentImageIndex ? 1 : 0,
+                    scale: index === currentImageIndex ? 1 : 1.05,
                   }}
-                  transition={{ duration: 1 }}
-                />
-              ))}
-
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                {heroImages.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setCurrentImageIndex(index);
-                      trackUserAction('hero_image_clicked', {
-                        image_index: index,
-                      });
-                    }}
-                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      index === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                    }`}
+                  transition={{
+                    opacity: { duration: 1.5, ease: "easeInOut" },
+                    scale: { duration: 1.5, ease: "easeInOut" }
+                  }}
+                  style={{
+                    zIndex: index === currentImageIndex ? 2 : 1
+                  }}
+                >
+                  <img
+                    src={image}
+                    alt={`Beauty inspiration ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    loading={index === 0 ? "eager" : "lazy"}
                   />
-                ))}
-              </div>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         </div>

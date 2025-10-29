@@ -16,6 +16,7 @@ import Footer from "./components/Footer.jsx";
 import ChatBot from "./components/ChatBot.jsx";
 import PaystackCallback from "./components/PaystackCallback.jsx";
 import Feedback from "./components/Feedback.jsx";
+import RoutinePage from "./components/RoutinePage.jsx";
 
 
 function AnalyticsWrapper({ children }) {
@@ -96,9 +97,9 @@ function App() {
                   <section id="about">
                     <About />
                   </section>
-                    <section id="feedback">
-    <Feedback />
-  </section>
+                  <section id="feedback">
+                    <Feedback />
+                  </section>
                   <section id="contact">
                     <Contact />
                   </section>
@@ -106,6 +107,7 @@ function App() {
               }
             />
 
+            <Route path="/routine" element={<RoutinePage />} />
             <Route path="/paystack-callback" element={<PaystackCallback />} />
           </Routes>
 

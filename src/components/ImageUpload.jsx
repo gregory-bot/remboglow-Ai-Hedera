@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { analyzeImage } from "../services/geminiService";
-import { Camera, Loader, CheckCircle, ExternalLink, Sparkles } from "lucide-react";
+import { Camera, Upload, Loader, CheckCircle, ExternalLink, Sparkles, DollarSign, Clock, Droplet, X } from "lucide-react";
 import {
   trackImageUpload,
   trackAnalysisComplete,
@@ -24,8 +24,14 @@ const ImageUpload = () => {
   const [uploadsCount, setUploadsCount] = useState(
     Number(localStorage.getItem("ff_uploads_count") || "0")
   );
+  const [userBudget, setUserBudget] = useState(10000);
+  const [showBudgetInput, setShowBudgetInput] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState(null);
 
   const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const paidFlag = sessionStorage.getItem("paystack_paid");
@@ -44,6 +50,14 @@ const ImageUpload = () => {
     }
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
+
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -61,11 +75,78 @@ const ImageUpload = () => {
     setPreviewUrl(URL.createObjectURL(file));
     setError("");
     setAnalysis(null);
+    setShowBudgetInput(true);
 
     trackImageUpload({
       size: file.size,
       type: file.type,
     });
+  };
+
+  const startCamera = async () => {
+    if (!canAddAnotherImage()) {
+      trackUserAction("paywall_shown", {
+        uploads_count: uploadsCount,
+        free_limit: FREE_UPLOADS,
+      });
+      initiatePayment();
+      return;
+    }
+
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: 1280, height: 720 }
+      });
+      setStream(mediaStream);
+      setShowCamera(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+      trackUserAction("camera_opened", {});
+    } catch (err) {
+      console.error("Camera error:", err);
+      setError("Unable to access camera. Please check permissions.");
+      trackUserAction("camera_error", {
+        error_message: err.message,
+      });
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+      setSelectedImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setError("");
+      setAnalysis(null);
+      setShowBudgetInput(true);
+      stopCamera();
+
+      trackImageUpload({
+        size: file.size,
+        type: file.type,
+        source: "camera"
+      });
+    }, "image/jpeg", 0.95);
   };
 
   const initiatePayment = async () => {
@@ -134,10 +215,11 @@ const ImageUpload = () => {
 
     trackUserAction("analysis_started", {
       upload_number: uploadsCount + 1,
+      budget: userBudget
     });
 
     try {
-      const result = await analyzeImage(selectedImage);
+      const result = await analyzeImage(selectedImage, userBudget);
 
       if (result?.error) {
         setError(result.message || "Analysis failed.");
@@ -146,6 +228,9 @@ const ImageUpload = () => {
         });
       } else {
         setAnalysis(result);
+
+        sessionStorage.setItem("face_fit_analysis", JSON.stringify(result));
+        sessionStorage.setItem("face_fit_budget", String(userBudget));
 
         const newCount = uploadsCount + 1;
         setUploadsCount(newCount);
@@ -169,6 +254,7 @@ const ImageUpload = () => {
     setPreviewUrl(null);
     setAnalysis(null);
     setError("");
+    setShowBudgetInput(false);
 
     trackUserAction("image_reset", {
       had_analysis: !!analysis,
@@ -179,24 +265,95 @@ const ImageUpload = () => {
     trackProductClick(product);
   };
 
+  if (showCamera) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 md:p-8 font-sans">
+        <div className="bg-white rounded-3xl p-8 shadow-2xl">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-bold text-[#b1006e]">Take Your Photo</h3>
+            <button
+              onClick={stopCamera}
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+            >
+              <X className="w-6 h-6 text-gray-600" />
+            </button>
+          </div>
+
+          <div className="relative bg-gray-900 rounded-2xl overflow-hidden mb-6">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-full h-auto max-h-[500px] object-cover"
+            />
+          </div>
+
+          <canvas ref={canvasRef} className="hidden" />
+
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={capturePhoto}
+              className="bg-[#b1006e] text-white px-8 py-4 rounded-full font-bold hover:bg-pink-700 transition-colors duration-200 flex items-center gap-2 text-lg"
+            >
+              <Camera className="w-6 h-6" />
+              Capture Photo
+            </button>
+            <button
+              onClick={stopCamera}
+              className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-full hover:bg-gray-50 transition-colors duration-200 font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 font-sans">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-white mb-4 flex items-center justify-center gap-2">
-          <Sparkles className="text-yellow-400" /> Try it out. Upload Your Photo
-        </h2>
-        <p className="text-gray-900">
-          First {FREE_UPLOADS} photos are free. Additional uploads cost KES {PRICE_KES}.
+        <p className="text-gray-800">
+          get skincare recommendations
+        </p>
+        <p className="text-sm text-gray-600 mt-2">
+          first {FREE_UPLOADS} analysis free. Additional uploads: KES {PRICE_KES}
         </p>
         {uploadsCount >= FREE_UPLOADS && !paid && (
-          <p className="text-sm text-orange-600 mt-2">
-            You've used your free uploads. Pay KES {PRICE_KES} to add more images.
+          <p className="text-sm text-orange-600 mt-2 font-semibold">
+            You've used your free analysis. Pay KES {PRICE_KES} for unlimited access.
           </p>
         )}
       </div>
 
       {!previewUrl ? (
-        <div className="border-2 border-dashed border-purple-500 rounded-xl p-8 text-center hover:border-yellow-400 transition-colors duration-200 bg-gray-800 bg-opacity-50">
+        <div className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <button
+              onClick={handleAddMore}
+              className="border-2 border-dashed border-[#b1006e] rounded-2xl p-8 text-center hover:border-pink-700 hover:bg-pink-50 transition-all duration-200 bg-white"
+            >
+              <Upload className="w-16 h-16 text-[#b1006e] mx-auto mb-4" />
+              <p className="text-xl font-semibold text-[#b1006e] mb-2">
+                Upload Photo
+              </p>
+              <p className="text-gray-600">Choose from gallery</p>
+              <p className="text-sm text-gray-500 mt-2">PNG, JPG up to 5MB</p>
+            </button>
+
+            <button
+              onClick={startCamera}
+              className="border-2 border-dashed border-[#b1006e] rounded-2xl p-8 text-center hover:border-pink-700 hover:bg-pink-50 transition-all duration-200 bg-white"
+            >
+              <Camera className="w-16 h-16 text-[#b1006e] mx-auto mb-4" />
+              <p className="text-xl font-semibold text-[#b1006e] mb-2">
+                Take Photo
+              </p>
+              <p className="text-gray-600">Use camera</p>
+              <p className="text-sm text-gray-500 mt-2">camera capture</p>
+            </button>
+          </div>
+
           <input
             ref={fileInputRef}
             type="file"
@@ -204,42 +361,52 @@ const ImageUpload = () => {
             onChange={handleImageSelect}
             className="hidden"
           />
-          <button
-            onClick={handleAddMore}
-            className="cursor-pointer inline-flex flex-col items-center"
-          >
-            <Camera className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-            <p className="text-xl font-semibold text-white mb-2">
-              Choose Your Photo
-            </p>
-            <p className="text-gray-300">Click to upload or drag and drop</p>
-            <p className="text-sm text-gray-400 mt-2">PNG, JPG up to 5MB</p>
-          </button>
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl border-2 border-pink-100">
             <div className="flex flex-col md:flex-row gap-6">
               <div className="md:w-1/2">
                 <img
                   src={previewUrl}
                   alt="Preview"
-                  className="w-full h-64 object-cover rounded-lg shadow-md"
+                  className="w-full h-64 object-cover rounded-2xl shadow-md"
                 />
               </div>
               <div className="md:w-1/2 flex flex-col justify-center">
-                <h3 className="text-xl font-semibold text-white mb-4">
-                  Ready for Analysis
+                <h3 className="text-2xl font-semibold text-[#b1006e] mb-4">
+                  Ready for Personalized Analysis
                 </h3>
-                <p className="text-gray-300 mb-6">
-                  We'll analyze your facial features and suggest personalized
-                  makeup & fashion ideas.
+                <p className="text-gray-700 mb-4">
+                  Get AI-powered facial analysis with real product recommendations
                 </p>
+
+                {showBudgetInput && (
+                  <div className="mb-4">
+                    <label className="block text-[#b1006e] font-semibold mb-2 flex items-center gap-2">
+                      Your Budget (KES)
+                    </label>
+                    <input
+                      type="number"
+                      value={userBudget}
+                      onChange={(e) => setUserBudget(Number(e.target.value))}
+                      min="1000"
+                      max="50000"
+                      step="500"
+                      className="w-full bg-pink-50 text-gray-800 px-4 py-2 rounded-lg border-2 border-pink-200 focus:border-[#b1006e] focus:outline-none"
+                      placeholder="e.g., 10000"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      We'll recommend products within your budget
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex gap-4 flex-wrap">
                   <button
                     onClick={handleUploadAndAnalyze}
                     disabled={analyzing}
-                    className="flex-1 min-w-[180px] bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+                    className="flex-1 min-w-[180px] bg-[#b1006e] text-white py-3 px-6 rounded-full font-bold hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
                   >
                     {analyzing ? (
                       <>
@@ -249,23 +416,16 @@ const ImageUpload = () => {
                     ) : (
                       <>
                         <Sparkles className="w-5 h-5" />
-                        Analyze My Look
+                        Get My Analysis
                       </>
                     )}
                   </button>
 
                   <button
                     onClick={resetSelection}
-                    className="px-6 py-3 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-full hover:bg-gray-50 transition-colors duration-200 font-semibold"
                   >
                     Choose Different Photo
-                  </button>
-
-                  <button
-                    onClick={handleAddMore}
-                    className="px-6 py-3 border border-purple-600 text-purple-400 rounded-lg hover:bg-purple-900 transition-colors duration-200"
-                  >
-                    Add More Images
                   </button>
                 </div>
               </div>
@@ -273,157 +433,232 @@ const ImageUpload = () => {
           </div>
 
           {error && (
-            <div className="bg-red-900 bg-opacity-50 border border-red-700 text-red-200 px-6 py-4 rounded-lg">
+            <div className="bg-red-50 border-2 border-red-300 text-red-700 px-6 py-4 rounded-2xl">
               {error}
             </div>
           )}
 
           {analysis && (
             <div className="space-y-6">
-              <div className="flex items-center gap-2 text-green-400 bg-green-900 bg-opacity-20 p-4 rounded-lg">
+              <div className="flex items-center gap-2 text-green-600 bg-green-50 border-2 border-green-300 p-4 rounded-2xl">
                 <CheckCircle className="w-6 h-6" />
                 <span className="text-lg font-semibold">
-                  Analysis Complete!
+                  Your Personalized Analysis is Ready!
                 </span>
               </div>
 
-              <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
-                <h3 className="text-2xl font-bold text-white mb-6 border-b border-gray-700 pb-2">
-                  Face Analysis
-                </h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {analysis.skinTone && (
-                    <div className="bg-gray-900 p-4 rounded-lg">
-                      <h4 className="font-semibold text-purple-400 mb-2">
-                        Skin Tone
-                      </h4>
-                      <p className="text-white text-lg capitalize">{analysis.skinTone}</p>
-                    </div>
-                  )}
-                  {analysis.facialShape && (
-                    <div className="bg-gray-900 p-4 rounded-lg">
-                      <h4 className="font-semibold text-purple-400 mb-2">
-                        Facial Shape
-                      </h4>
-                      <p className="text-white text-lg capitalize">{analysis.facialShape}</p>
-                    </div>
-                  )}
-                  {analysis.currentLook && analysis.currentLook !== 'Not specified' && (
-                    <div className="md:col-span-2 bg-gray-900 p-4 rounded-lg">
-                      <h4 className="font-semibold text-purple-400 mb-2">
-                        Current Look
-                      </h4>
-                      <p className="text-white">{analysis.currentLook}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {analysis.makeupRecommendations && (
-                <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
-                  <h3 className="text-2xl font-bold text-white mb-6 border-b border-gray-700 pb-2">
-                    Makeup Recommendations
+              {analysis.skinAnalysis && (
+                <div className="bg-white rounded-3xl p-6 shadow-2xl border-2 border-pink-100">
+                  <h3 className="text-2xl font-bold text-[#b1006e] mb-6 border-b-2 border-pink-200 pb-2 flex items-center gap-2">
+                    <Droplet className="text-[#b1006e]" />
+                    Your Skin Profile
                   </h3>
                   <div className="grid md:grid-cols-2 gap-6">
-                    {Object.entries(analysis.makeupRecommendations).map(
-                      ([key, val]) => (
-                        <div key={key} className="bg-gray-900 p-4 rounded-lg">
-                          <h4 className="font-semibold text-purple-400 mb-2 capitalize">
-                            {key.replace(/([A-Z])/g, ' $1')}
-                          </h4>
-                          <p className="text-white">{val}</p>
+                    <div className="bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                      <h4 className="font-semibold text-[#b1006e] mb-2">Skin Tone</h4>
+                      <p className="text-gray-800 text-lg capitalize">{analysis.skinAnalysis.skinTone}</p>
+                    </div>
+                    <div className="bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                      <h4 className="font-semibold text-[#b1006e] mb-2">Facial Shape</h4>
+                      <p className="text-gray-800 text-lg capitalize">{analysis.skinAnalysis.facialShape}</p>
+                    </div>
+                    <div className="bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                      <h4 className="font-semibold text-[#b1006e] mb-2">Skin Type</h4>
+                      <p className="text-gray-800 text-lg capitalize">{analysis.skinAnalysis.skinType}</p>
+                    </div>
+                    <div className="bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                      <h4 className="font-semibold text-[#b1006e] mb-2">Undertone</h4>
+                      <p className="text-gray-800 text-lg capitalize">{analysis.skinAnalysis.undertone}</p>
+                    </div>
+                    {analysis.skinAnalysis.concerns && analysis.skinAnalysis.concerns.length > 0 && (
+                      <div className="md:col-span-2 bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                        <h4 className="font-semibold text-[#b1006e] mb-2">Skin Concerns</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {analysis.skinAnalysis.concerns.map((concern, idx) => (
+                            <span key={idx} className="bg-[#b1006e] text-white px-3 py-1 rounded-full text-sm font-semibold">
+                              {concern}
+                            </span>
+                          ))}
                         </div>
-                      )
+                      </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {analysis.skincareRoutine && (
+                <div className="bg-white rounded-3xl p-6 shadow-2xl border-2 border-pink-100">
+                  <h3 className="text-2xl font-bold text-[#b1006e] mb-6 border-b-2 border-pink-200 pb-2 flex items-center gap-2">
+                    <Clock className="text-[#b1006e]" />
+                    Your Personalized Skincare Routine
+                  </h3>
+
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-xl font-semibold text-[#b1006e] mb-4">☀️ Morning Routine</h4>
+                      <div className="space-y-3">
+                        {analysis.skincareRoutine.morning?.map((step, idx) => (
+                          <div key={idx} className="bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <span className="text-[#b1006e] font-semibold">Step {idx + 1}: {step.step}</span>
+                                <p className="text-gray-800 font-bold">{step.product}</p>
+                              </div>
+                            </div>
+                            <p className="text-gray-700 text-sm mb-2">{step.reason}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xl font-semibold text-[#b1006e] mb-4">🌙 Evening Routine</h4>
+                      <div className="space-y-3">
+                        {analysis.skincareRoutine.evening?.map((step, idx) => (
+                          <div key={idx} className="bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <span className="text-[#b1006e] font-semibold">Step {idx + 1}: {step.step}</span>
+                                <p className="text-gray-800 font-bold">{step.product}</p>
+                              </div>
+                            </div>
+                            <p className="text-gray-700 text-sm mb-2">{step.reason}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {analysis.skincareRoutine.weekly && analysis.skincareRoutine.weekly.length > 0 && (
+                      <div>
+                        <h4 className="text-xl font-semibold text-[#b1006e] mb-4">📅 Weekly Treatments</h4>
+                        <div className="space-y-3">
+                          {analysis.skincareRoutine.weekly.map((step, idx) => (
+                            <div key={idx} className="bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <span className="text-[#b1006e] font-semibold">{step.step}</span>
+                                  <p className="text-gray-800 font-bold">{step.product}</p>
+                                  <p className="text-gray-600 text-sm">{step.frequency}</p>
+                                </div>
+                              </div>
+                              <p className="text-gray-700 text-sm">{step.reason}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {analysis.makeupRecommendations && (
+                <div className="bg-white rounded-3xl p-6 shadow-2xl border-2 border-pink-100">
+                  <h3 className="text-2xl font-bold text-[#b1006e] mb-6 border-b-2 border-pink-200 pb-2">
+                    💄 Makeup Recommendations
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {Object.entries(analysis.makeupRecommendations).map(([key, val]) => (
+                      <div key={key} className="bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                        <h4 className="font-semibold text-[#b1006e] mb-2 capitalize">
+                          {key.replace(/([A-Z])/g, ' $1')}
+                        </h4>
+                        <p className="text-gray-800">{val}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
               {analysis.fashionRecommendations && (
-                <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
-                  <h3 className="text-2xl font-bold text-white mb-6 border-b border-gray-700 pb-2">
-                    Fashion Recommendations
+                <div className="bg-white rounded-3xl p-6 shadow-2xl border-2 border-pink-100">
+                  <h3 className="text-2xl font-bold text-[#b1006e] mb-6 border-b-2 border-pink-200 pb-2">
+                    👗 Fashion Style Guide
                   </h3>
                   <div className="grid md:grid-cols-2 gap-6">
-                    {Object.entries(analysis.fashionRecommendations).map(
-                      ([key, val]) => (
-                        <div key={key} className="bg-gray-900 p-4 rounded-lg">
-                          <h4 className="font-semibold text-purple-400 mb-2 capitalize">
-                            {key}
-                          </h4>
-                          <p className="text-white">{val}</p>
-                        </div>
-                      )
-                    )}
+                    {Object.entries(analysis.fashionRecommendations).map(([key, val]) => (
+                      <div key={key} className="bg-pink-50 p-4 rounded-2xl border border-pink-200">
+                        <h4 className="font-semibold text-[#b1006e] mb-2 capitalize">
+                          {key}
+                        </h4>
+                        {Array.isArray(val) ? (
+                          <div className="flex flex-wrap gap-2">
+                            {val.map((item, idx) => (
+                              <span key={idx} className="bg-[#b1006e] text-white px-2 py-1 rounded-full text-sm font-semibold">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-800">{val}</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
-              {analysis.productSuggestions &&
-                analysis.productSuggestions.length > 0 && (
-                  <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
-                    <h3 className="text-2xl font-bold text-white mb-6 border-b border-gray-700 pb-2">
-                      Recommended Products
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {analysis.productSuggestions.map((product, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-gray-900 rounded-lg overflow-hidden border border-gray-700 transition-transform duration-200 hover:scale-[1.02]"
-                        >
-                          <div className="flex">
-                            <div className="w-1/3">
-                              <img
-                                src={product.imageUrl || "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkeT0iMC4zNWVtIiBmb250LXNpemU9IjE4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+"}
-                                alt={product.product}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkeT0iMC4zNWVtIiBmb250LXNpemU9IjE4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+";
-                                }}
-                              />
-                            </div>
-                            <div className="w-2/3 p-4">
-                              <p className="font-semibold text-white text-sm mb-1">
-                                {product.brand}
-                              </p>
-                              <p className="text-white text-lg font-bold mb-2">
-                                {product.product}
-                              </p>
-                              {product.shade && (
-                                <p className="text-gray-300 text-sm mb-2">
-                                  Shade: {product.shade}
-                                </p>
-                              )}
-                              <p className="text-purple-400 font-semibold mb-2">
-                                {product.price}
-                              </p>
-                              <div className="flex justify-between items-center mt-3">
-                                <span className={`text-xs px-2 py-1 rounded-full ${product.isAffordable ? 'bg-green-900 text-green-300' : 'bg-purple-900 text-purple-300'}`}>
-                                  {product.isAffordable ? 'Affordable' : 'Premium'}
-                                </span>
-                                {product.buyUrl ? (
-                                  <a
-                                    href={product.buyUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={() => handleProductClick(product)}
-                                    className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-2 rounded-lg flex items-center gap-1 transition-colors"
-                                  >
-                                    Buy <ExternalLink className="w-3 h-3" />
-                                  </a>
-                                ) : (
-                                  <span className="text-xs text-gray-400 px-2 py-1">
-                                    Link unavailable
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+              {analysis.productRecommendations && analysis.productRecommendations.length > 0 && (
+                <div className="bg-white rounded-3xl p-6 shadow-2xl border-2 border-pink-100">
+                  <h3 className="text-2xl font-bold text-[#b1006e] mb-6 border-b-2 border-pink-200 pb-2">
+                    🛍️ Recommended Products (Within Your Budget)
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {analysis.productRecommendations.map((product, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-pink-50 rounded-2xl p-4 border-2 border-pink-200 hover:border-[#b1006e] transition-all duration-200"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <span className="text-xs text-[#b1006e] font-semibold uppercase">{product.category}</span>
+                            <p className="text-gray-800 font-bold text-lg">{product.brand}</p>
+                            <p className="text-gray-700">{product.product}</p>
                           </div>
+                          <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                            product.priority === 'essential'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}>
+                            {product.priority}
+                          </span>
                         </div>
-                      ))}
-                    </div>
+
+                        <p className="text-gray-600 text-sm mb-3 italic">{product.reason}</p>
+
+                        <div className="flex justify-between items-center">
+                          <p className="text-[#b1006e] font-bold text-xl">{product.price}</p>
+                          {product.buyUrl ? (
+                            <a
+                              href={product.buyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => handleProductClick(product)}
+                              className="bg-[#b1006e] hover:bg-pink-700 text-white px-4 py-2 rounded-full flex items-center gap-2 transition-colors font-semibold"
+                            >
+                              Buy Now <ExternalLink className="w-4 h-4" />
+                            </a>
+                          ) : (
+                            <span className="text-xs text-gray-500">Link unavailable</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+
+              <div className="bg-gradient-to-r from-[#b1006e] to-pink-600 rounded-3xl p-8 text-center shadow-2xl">
+                <h3 className="text-2xl font-bold text-white mb-3">Want a Daily Routine Plan?</h3>
+                <p className="text-white mb-4">
+                  Get a detailed step-by-step daily skincare and makeup routine tailored to your needs
+                </p>
+                <button
+                  onClick={() => window.location.href = '/routine'}
+                  className="bg-white text-[#b1006e] px-8 py-3 rounded-full font-bold hover:bg-gray-100 transition-colors"
+                >
+                  Create My Routine
+                </button>
+              </div>
             </div>
           )}
         </div>

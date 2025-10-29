@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const navItems = [
-    { name: "Home", href: "#home" },
-    { name: "Features", href: "#features" },
-    { name: "About", href: "#about" },
-    { name: "Feedback", href: "#feedback" },
-    { name: "Contact", href: "#contact" },
-    { name: "Get Started", href: "#features" },
+    { name: "Home", href: "#home", type: "section" },
+    { name: "Features", href: "#features", type: "section" },
+    { name: "My Routine", href: "/routine", type: "route" },
+    { name: "About", href: "#about", type: "section" },
+    { name: "Feedback", href: "#feedback", type: "section" },
+    { name: "Contact", href: "#contact", type: "section" },
+    { name: "Get Started", href: "#features", type: "section" },
   ];
 
   useEffect(() => {
@@ -22,15 +26,30 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleNavClick = (item) => {
+    if (item.type === "route") {
+      navigate(item.href);
+      setIsMenuOpen(false);
+    } else {
+      if (location.pathname !== "/") {
+        navigate("/");
+        setTimeout(() => {
+          scrollToSection(item.href);
+        }, 100);
+      } else {
+        scrollToSection(item.href);
+      }
+    }
+  };
+
   const scrollToSection = (href) => {
     const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
     }
-    setIsMenuOpen(false); // close menu after click
+    setIsMenuOpen(false);
   };
 
-  // Close menu on outside click or Esc
   useEffect(() => {
     if (!isMenuOpen) return;
 
@@ -60,7 +79,6 @@ const Header = () => {
 
   return (
     <>
-      {/* Header */}
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
@@ -70,8 +88,7 @@ const Header = () => {
       >
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate("/")}>
               <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-lg">
                 <img
                   src="https://i.pinimg.com/736x/2a/b8/93/2ab89346194ee5eea1e1990da184629d.jpg"
@@ -84,13 +101,16 @@ const Header = () => {
               </span>
             </div>
 
-            {/* Desktop Nav */}
             <div className="hidden md:flex items-center space-x-8">
               {navItems.map((item) => (
                 <button
                   key={item.name}
-                  onClick={() => scrollToSection(item.href)}
-                  className="text-gray-800 hover:text-[#b1006e] font-medium transition-colors duration-200 relative group"
+                  onClick={() => handleNavClick(item)}
+                  className={`font-medium transition-colors duration-200 relative group ${
+                    item.type === "route" && location.pathname === item.href
+                      ? "text-[#b1006e]"
+                      : "text-gray-800 hover:text-[#b1006e]"
+                  }`}
                 >
                   {item.name}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#b1006e] transition-all duration-300 group-hover:w-full"></span>
@@ -98,7 +118,6 @@ const Header = () => {
               ))}
             </div>
 
-            {/* Hamburger Button */}
             <button
               className="hamburger-btn md:hidden p-2 rounded-full bg-white shadow-md hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center w-12 h-12 mr-6"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -114,7 +133,6 @@ const Header = () => {
         </nav>
       </header>
 
-      {/* Mobile Menu - Left Drawer */}
       <div
         className={`mobile-menu fixed inset-0 z-50 transition-all duration-300 ease-in-out ${
           isMenuOpen
@@ -122,20 +140,17 @@ const Header = () => {
             : "opacity-0 invisible pointer-events-none"
         }`}
       >
-        {/* Overlay */}
         <div
           className="absolute inset-0 bg-black bg-opacity-50"
           onClick={() => setIsMenuOpen(false)}
         />
 
-        {/* Drawer */}
         <div
           className={`absolute top-0 left-0 h-full w-72 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
             isMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           <div className="flex flex-col p-8 gap-6 h-full">
-            {/* Close Button */}
             <button
               onClick={() => setIsMenuOpen(false)}
               className="self-end p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
@@ -144,8 +159,10 @@ const Header = () => {
               <X className="w-6 h-6 text-gray-600" />
             </button>
 
-            {/* Logo */}
-            <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center gap-3 mb-8 cursor-pointer" onClick={() => {
+              navigate("/");
+              setIsMenuOpen(false);
+            }}>
               <div className="w-12 h-12 rounded-full overflow-hidden bg-[#e2b8e6] shadow-lg">
                 <img
                   src="https://media.istockphoto.com/id/1411160815/photo/a-stylish-young-black-woman-with-an-afro-and-a-trendy-style-portrait-of-an-african-high.jpg?b=1&s=612x612&w=0&k=20&c=SwXiH8FYPUTPUk96qd0F8P3fnwPVuLv2XJivlmbVqs4="
@@ -158,20 +175,22 @@ const Header = () => {
               </span>
             </div>
 
-            {/* Nav Links */}
             <div className="flex flex-col gap-4 flex-1">
               {navItems.map((item) => (
                 <button
                   key={item.name}
-                  onClick={() => scrollToSection(item.href)}
-                  className="w-full text-left text-gray-800 hover:text-[#b1006e] font-medium px-4 py-3 rounded-lg hover:bg-purple-50 transition-colors duration-200 text-lg"
+                  onClick={() => handleNavClick(item)}
+                  className={`w-full text-left font-medium px-4 py-3 rounded-lg hover:bg-purple-50 transition-colors duration-200 text-lg ${
+                    item.type === "route" && location.pathname === item.href
+                      ? "text-[#b1006e] bg-purple-50"
+                      : "text-gray-800 hover:text-[#b1006e]"
+                  }`}
                 >
                   {item.name}
                 </button>
               ))}
             </div>
 
-            {/* Footer */}
             <div className="pt-8 border-t border-gray-200">
               <p className="text-gray-600 text-sm">
                 © 2025 remboglow.com. All rights reserved.

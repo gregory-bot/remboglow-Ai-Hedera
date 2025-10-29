@@ -115,7 +115,7 @@ const Feedback = () => {
             {/* Rating */}
             <div className="text-center">
               <label className="block text-lg font-semibold text-gray-700 mb-6">
-                How would you rate your experience with Face-Fit?
+                rate your experience with remboglow
               </label>
               <div className="flex justify-center space-x-3">
                 {[1, 2, 3, 4, 5].map((star) => (
