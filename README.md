@@ -30,7 +30,6 @@ Each recommendation is backed by verifiable product data stored on **Hedera Hash
 
 👉 **Live Demo:** [https://remboglow.com](https://remboglow.com)
 
-*(Add your actual screenshots under `/assets` or replace links with live URLs.)*
 
 ---
 
@@ -40,7 +39,7 @@ Each recommendation is backed by verifiable product data stored on **Hedera Hash
 - 🎨 **Personalized Recommendations** — Matches products based on your skin profile and preferences.  
 - 🪪 **Verified Product Authenticity** — Leverages **Hedera Hashgraph** for tamper-proof beauty product records.  
 - 🧴 **Smart Matching Algorithm** — Learns from user feedback for evolving accuracy.  
-- 🌐 **Cross-Platform Web App** — Built with **React + Vite**, optimized for both desktop and mobile.  
+- 🌐 **Cross-Platform Web App** — Built with **React, Hedera Hashgraph SDK**, optimized for both desktop and mobile.  
 
 ---
 
