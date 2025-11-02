@@ -19,10 +19,11 @@ Each recommendation is backed by verifiable product data stored on **Hedera Hash
 
 ---
 
-## 🎬 Demo / Screenshots
+## Demo
 
 | Feature | Preview |
 |----------|----------|
+| How it Works | ![App Screenshot](./Screenshot%20(924).png) |
 | 🧠 AI Skin Analysis | ![Skin Analysis Screenshot](./assets/skin-analysis-demo.png) |
 | 🎨 Product Recommendations | ![Recommendations Screenshot](./assets/recommendation-demo.png) |
 | 🪙 Hedera Verification | ![Hedera Verification Screenshot](./assets/hedera-verification.png) |
