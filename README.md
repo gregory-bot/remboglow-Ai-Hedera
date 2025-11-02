@@ -68,7 +68,7 @@ Each recommendation is backed by verifiable product data stored on **Hedera Hash
 ## 🚀 Getting Started
 
 ## Hedera Certification 
-| ![App Screenshot](./09b3ff3f-a45a-4a7e-a7fe-8eb877bf4819.pdf) |
+|  ![App Screenshot](./Screenshot%20(927).png) |
 
 ### 1️⃣ Clone the repository
 ```bash
