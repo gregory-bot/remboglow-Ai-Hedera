@@ -1,5 +1,7 @@
 # remboglow.com
-![Skin Analysis Screenshot](.Screenshot (923).png)
+
+![App Screenshot](./Screenshot%20(923).png)
+
 
 # 💫 Remboglow — AI-Powered Skincare & Makeup Matcher
 
